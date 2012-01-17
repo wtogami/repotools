@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# repoclone
-# version 0.1
+# repoclone.sh
+# version 0.2
 # 
 # Clones a local Android repo to another local Android repo, with native git clone object hardlinks to conserve storage.
 #
@@ -31,8 +31,10 @@ set -e
 
 # Copy directory structure without .git directories
 echo "### Copy directory structure without .git directories ###"
-echo rsync -a -f"+ */" -f"- *" $1/ $2/
-rsync -a -f"+ */" -f"- *" $1/ $2/
+echo mkdir $2/
+echo rsync -a -f"+ */" -f"- *" $1/.repo/ $2/.repo/
+mkdir $2/
+rsync -a -f"+ */" -f"- *" $1/.repo/ $2/.repo/
 
 # Copy .repo without pack/ directories
 echo "### Copy .repo without pack/ directories ###"
@@ -47,23 +49,16 @@ for packdir in $(find $1/.repo/ -type d -name pack); do
   cp -al $packdir $targetdir
 done
 
-# List of .git directories
-GITLIST=$(find $1/ -type d -name .git|grep -v \.repo)
-
-# Copy .git symlinks
-echo "### Copy .git symlinks ###"
-for fromgit in $GITLIST; do
-  togit=$(echo $fromgit |sed "s/^$1/$2/")
-  echo rsync -a $fromgit/ $togit/
-  rsync -a $fromgit/ $togit/
-done
-
 # Done
 echo
 echo "Done cloning $1 to $2!"
 echo
-echo "Next run the following commands to checkout the source from the"
-echo "repos to the working directories."
-echo "           cd $2"
-echo "           gitreset.sh --yes"
+echo "Suggested Next Steps"
+echo "===================="    
+echo "    cd $2"
+echo "    repo init -b ics"
+echo "        # Switch to a different branch."
+echo "        # You should first adjust your .repo/local_manifest.xml"
+echo "    repo sync"
+echo "        # Restore checkout of working directories from .repo"
 echo
