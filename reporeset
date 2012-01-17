@@ -1,0 +1,47 @@
+#!/bin/bash
+#
+# reporeset
+# version 0.1
+# 
+# Resets the working directories of all git projects in the repo.
+#
+# Use this to checkout all source into working directories or
+# to restore your working directories to a pristine state. 
+#
+# Copyright 2012 Warren Togami <wtogami@gmail.com>
+# Licensed under the GNU GPL v3+.
+
+# Sanity Checks
+if [ "$1" != "--yes" ]; then
+  echo "ERROR: You must invoke this command with the following"
+  echo "       parameter if you are ABSOLUTELY SURE you want to"
+  echo "       reset your working directories."
+  echo
+  echo "    $0 --yes"
+  echo
+  exit 255
+fi
+if [ ! -d ".repo" ]; then
+  echo "ERROR: You must invoke this command within a repo."
+  exit 255
+fi
+
+# Abort immediately if any error occurs
+set -e
+
+# List of .git directories
+GITLIST=$(find -type d -name .git|grep -v \.repo)
+
+# git reset --hard
+for gitrepo in $GITLIST; do
+  cd $gitrepo/../
+  echo "$PWD: git reset --hard"
+  git reset --hard
+  cd - > /dev/null
+done
+
+# Done!
+echo
+echo "Done!"
+echo
+

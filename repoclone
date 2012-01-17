@@ -1,0 +1,69 @@
+#!/bin/bash
+#
+# repoclone
+# version 0.1
+# 
+# Clones a local Android repo to another local Android repo, with native git clone object hardlinks to conserve storage.
+#
+# Copyright 2012 Warren Togami <wtogami@gmail.com>
+# Licensed under the GNU GPL v3+.
+
+errorexit() {
+  echo "ERROR: You must invoke this command with two parameters."
+  echo
+  echo "    $0 <fromrepo> <torepo>"
+  echo
+  echo "      * <fromrepo> must be in the current directory."
+  echo "      *  <torepo> must be in the current directory, but you can move it later."
+  echo "      * <torepo> MUST NOT EXIST."
+  echo "      * Neither names should have a trailing slash."
+  exit 255
+}
+
+# Sanity Checks
+# TODO: Make this more flexible in dealing with relative or full pathnames
+[ -z "$1" ] || [ -z "$2" ] && errorexit
+[ "$1" != $(basename $1) ] || [ "$2" != $(basename $2) ] && errorexit
+[ -e "$2" ] && echo "ERROR: $2 already exists." && exit 255
+
+# Abort immediately if any error occurs
+set -e
+
+# Copy directory structure without .git directories
+echo "### Copy directory structure without .git directories ###"
+echo rsync -a -f"+ */" -f"- *" $1/ $2/
+rsync -a -f"+ */" -f"- *" $1/ $2/
+
+# Copy .repo without pack/ directories
+echo "### Copy .repo without pack/ directories ###"
+echo rsync -a -f"- pack/" $1/.repo/ $2/.repo/
+rsync -a -f"- pack/" $1/.repo/ $2/.repo/
+
+# Hardlink copy git pack/ objects
+echo "### Hardlink copy git pack/ objects ###"
+for packdir in $(find $1/.repo/ -type d -name pack); do
+  targetdir=$(echo $packdir |sed "s/^$1/$2/;s/pack$//")
+  echo cp -al $packdir $targetdir
+  cp -al $packdir $targetdir
+done
+
+# List of .git directories
+GITLIST=$(find $1/ -type d -name .git|grep -v \.repo)
+
+# Copy .git symlinks
+echo "### Copy .git symlinks ###"
+for fromgit in $GITLIST; do
+  togit=$(echo $fromgit |sed "s/^$1/$2/")
+  echo rsync -a $fromgit/ $togit/
+  rsync -a $fromgit/ $togit/
+done
+
+# Done
+echo
+echo "Done cloning $1 to $2!"
+echo
+echo "Next run the following commands to checkout the source from the"
+echo "repos to the working directories."
+echo "           cd $2"
+echo "           gitreset.sh --yes"
+echo
