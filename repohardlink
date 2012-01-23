@@ -1,0 +1,60 @@
+#!/bin/bash
+#
+# repohardlink
+# version 0.1
+# 
+# Optimizes storage by hardlinking common git pack objects between two repos.
+#
+# This script runs "git gc" to repack the pack objects before using the hardlink
+# tool to unify the storage between identical pack objects in two repos.
+# Normally it only considers git repos that were changed.  However if you 
+# use the optional --all parameter it will repack and unify all git objects
+# between the two repos.  This is useful to conserve storage when you have
+# preexisting independent repos on your local filesystem.
+#
+# Copyright 2012 Warren Togami <wtogami@gmail.com>
+# Licensed under the GNU GPL v3+.
+
+errorexit() {
+  echo "ERROR: You must invoke this command with two parameters."
+  echo
+  echo "    $0 <fromrepo> <torepo> [--all]"
+  echo
+  echo "      * <fromrepo> must be in the current directory."
+  echo "      * <torepo> must be in the current directory, but you can move it later."
+  echo "      * Neither names should have a trailing slash."
+  echo
+  echo "      [--all] parameter runs git gc on all git repositories.  Useful if you"
+  echo "              are merging storage of two repos for the first time."
+  echo
+  exit 255
+}
+
+# Sanity Checks
+# TODO: Make this more flexible in dealing with relative or full pathnames
+[ -z "$1" ] || [ -z "$2" ] && errorexit
+[ "$1" != $(basename $1) ] || [ "$2" != $(basename $2) ] && errorexit
+
+# Abort immediately if any error occurs
+set -e
+
+GITLIST1=$(find $1/ -type d -name .git)
+GITLIST2=$(find $2/ -type d -name .git)
+unset REPACKLIST
+for gitdir in $GITLIST1 $GITLIST2; do
+  # Skip if objects directory does not exist
+  [ ! -d $gitdir/objects/ ] && continue
+  # Skip if two directories in .git/objects/, no repacking necessary
+  if ls -l $gitdir/objects/ |grep -q "^total 8"; then
+    # Unless --all was specified
+    [ "$3" != "--all" ] && continue
+  fi
+  cd $gitdir/..
+  pwd
+  git gc
+  cd - > /dev/null
+  REPACKLIST="$REPACKLIST $gitdir/objects/pack/"
+done
+
+set -x
+hardlink -cvv $REPACKLIST
