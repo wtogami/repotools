@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# repoclone.sh
+# repoclone
 # version 0.2
 # 
 # Clones a local Android repo to another local Android repo, with native git clone object hardlinks to conserve storage.
@@ -14,7 +14,7 @@ errorexit() {
   echo "    $0 <fromrepo> <torepo>"
   echo
   echo "      * <fromrepo> must be in the current directory."
-  echo "      *  <torepo> must be in the current directory, but you can move it later."
+  echo "      * <torepo> must be in the current directory, but you can move it later."
   echo "      * <torepo> MUST NOT EXIST."
   echo "      * Neither names should have a trailing slash."
   exit 255
